@@ -26,8 +26,6 @@ def __main__():
     parser.add_argument('-u', '--url', dest='url', metavar="http://galaxy_url:port",
                         help="Be sure to specify the port on which galaxy is running",
                         default="http://usegalaxy.org")
-    parser.add_argument('-x', '--xunit-output', dest="xunit_output", type=argparse.FileType('w'), default='report.xml',
-                        help="""Location to store xunit report in""")
     parser.add_argument('-w', '--workflow-output', dest="workflow_output", type=str, default='out.ga',
                         help="""Location to store Galaxy workflow in""")
     parser.add_argument('-i', '--workflow-id', dest="workflow_id", type=str)
