@@ -1,27 +1,5 @@
-g.dragging rect {
-    stroke: green;
-}
-
 svg {
     /*border: 1px solid black;*/
-}
-
-#position {
-    position: absolute;
-    bottom:   40px;
-    right: 40px;
-}
-
-#upload {
-    position: absolute;
-    top:   40px;
-    right: 40px;
-}
-
-#download {
-    position: absolute;
-    top:   120px;
-    right: 40px;
 }
 
 #right_col {
@@ -34,39 +12,9 @@ body, body div.row{
     overflow-y: hidden;
 }
 
-#left_col {
-    padding:0px;
-}
 
-#left_col_contents{
-    overflow-y: scroll;
-    margin-top: -15px;
-    z-index: 2;
-}
-
-#logo {
-     position: relative;
-     z-index: 1;
-     background: white;
-     text-align: center;
-}
-
-#logo img{
-     width: 100%;
-}
-
-#logo h1{
-    text-align:center;
-    font-size: 1.4rem;
-    /*padding-bottom: 1rem;*/
-    margin: 0.5rem 0 0.5rem 0;
-}
-
-.collapsible-header.lighten-2 {
-     padding-left: 5ex;
-}
-
-#version {
-     font-family: monospace;
-     font-size: 0.9rem;
-}
+.pbar_new { fill: #bfbfbf}
+.pbar_queued { fill : #9f9f9f; }
+.pbar_running { fill : #ffed6f; }
+.pbar_ok { fill : #b0f1b0; }
+.pbar_error { fill : #f9c7c5; }

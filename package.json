@@ -26,6 +26,7 @@
     "webpack": "^1.13.1"
   },
   "scripts": {
+    "build": "webpack",
     "postinstall": "bower install",
     "start": "http-server -a 0.0.0.0 -p 10000",
     "test": "mocha",

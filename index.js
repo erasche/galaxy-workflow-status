@@ -1,18 +1,9 @@
 require("./index.css");
 require.context("./", false, /^\.\/.*\.html/);
-var fileSaver = require("./bower_components/file-saver/FileSaver.js");
 var globalConfig = require("json!./package.json");
-
-var Raven  = require("./bower_components/raven-js/dist/raven.js");
-Raven.config('https://c1404b96be204c03be5725b9194d2de8@biobio-monitor.tamu.edu/9', {
-    release: globalConfig.version,
-}).install()
-
-var graphHistory = require("./history.js");
 
 var d3 = require("./bower_components/d3/d3.js");
 var margin = {top: -5, right: -5, bottom: -5, left: -5},
-    width = $("#right_col").width() + 20 - margin.left - margin.right,
     mapped_parameters = [
         'node_color',
         'node_stroke_color',
@@ -20,18 +11,17 @@ var margin = {top: -5, right: -5, bottom: -5, left: -5},
         'node_border_thickness',
         'link_stroke',
         'link_thickness',
-        'unfocused_opacity',
     ],
     height = $(window).height() - margin.top - margin.bottom
+    width = $(window).width() - margin.left - margin.right
     default_config = {
-        node_color: '#ebd9b2',
-        node_stroke_color: '#d6b161',
+        node_color: '#ffffff',
+        node_stroke_color: '#333333',
         node_text_color: '#000000',
         node_border_thickness: 1,
 
         link_stroke: '#000000',
         link_thickness: 1,
-        unfocused_opacity: 30,
 
         font_family: 'Ubuntu Mono, monospace',
         node_height: 20,
@@ -45,15 +35,40 @@ var margin = {top: -5, right: -5, bottom: -5, left: -5},
     graph = {
         config: default_config
     },
-    node_color_node = $("#node_color"),
-    node_stroke_color_node = $("#node_stroke_color"),
-    node_text_color_node = $("#node_text_color"),
-    node_border_thickness_node = $("#node_border_thickness"),
-    link_stroke_node = $("#link_stroke"),
-    link_thickness_node = $("#link_thickness"),
     container = null,
-    simulation = null,
-    dirty = false;
+    simulation = null;
+
+var PBAR_STATES = ['new', 'queued', 'running', 'ok', 'error'];
+
+var progressBarWidth= function(progress, state){
+	if(progress === undefined){ return 0; }
+	if(state in progress){
+		return progress[state];
+	} else {
+		return 0;
+	}
+}
+
+var progressBarLeftSum = function(progress, state){
+	if(state === 'new'){
+		return 0;
+	}
+	else if(state === 'queued'){
+		return progressBarWidth(progress, 'new') + progressBarLeftSum(progress, 'new');
+	}
+	else if(state === 'running'){
+		return progressBarWidth(progress, 'queued') + progressBarLeftSum(progress, 'queued');
+	}
+	else if(state === 'ok'){
+		return progressBarWidth(progress, 'running') + progressBarLeftSum(progress, 'running');
+	}
+	else if(state === 'error'){
+		return progressBarWidth(progress, 'ok') + progressBarLeftSum(progress, 'ok');
+	}
+	else {
+		 return 10;
+	}
+}
 
 var zoom = d3.zoom()
     .scaleExtent([0.2, 10])
@@ -77,7 +92,29 @@ var positionOfNode = function(graph, id){
     }
 }
 
-var processGalaxyWorkflowToGraph = function(ga){
+var stepCounts = function(data){
+    len = Object.keys(data).length;
+    var counts = {};
+    for(key in data){
+        for(step in data[key]){
+            if(!(step in counts)){
+                counts[step] = {};
+            }
+            if(!(data[key][step] in counts[step])){
+                counts[step][data[key][step]] = 0;
+            }
+            counts[step][data[key][step]] += 1;
+        }
+    }
+    for(key in counts){
+        for(state in counts[key]){
+            counts[key][state] /= len;
+        }
+    }
+    return counts;
+}
+
+var processGalaxyWorkflowToGraph = function(ga, progress){
     local_graph = {
         'meta': {
             'name': ga.name,
@@ -90,12 +127,13 @@ var processGalaxyWorkflowToGraph = function(ga){
 
     for(var i in ga.steps){
         var step = ga.steps[i];
-        step.x = step.position.left / 2;
+        step.x = step.position.left / 1.3;
         step.y = step.position.top / 2;
-        step.focus = true;
-        if(Math.random() > 0.4){
-            step.focus = false;
-        }
+		if(step.uuid in progress){
+			step.progress = progress[step.uuid];
+		} else {
+			step.progress = progress[step.id];
+		}
         local_graph.nodes.push(step);
 
         for(var j in ga.steps[i].input_connections){
@@ -141,18 +179,6 @@ function hexToRgb(hex) {
     return [r, g, b]
 }
 
-function save(){
-    if(dirty){
-        console.log("Saving");
-        console.log(graph.config);
-        sessionStorage.setItem('graph', JSON.stringify(graph));
-        sessionStorage.setItem('origGraph', JSON.stringify(origGraph));
-        sessionStorage.setItem('history', JSON.stringify(graphHistory.data()));
-        //Materialize.toast('Saved', 1000)
-        dirty = false;
-    }
-}
-
 function clone(obj){
     return JSON.parse(JSON.stringify(obj));
 }
@@ -160,9 +186,7 @@ function clone(obj){
 function restore(){
     graph = JSON.parse(sessionStorage.getItem('graph'));
     origGraph = JSON.parse(sessionStorage.getItem('origGraph'));
-    graphHistory.restore(JSON.parse(sessionStorage.getItem('history')));
     restoreParamsFromGraph(graph);
-    dirty = false;
 }
 
 function restoreParamsFromGraph(g){
@@ -170,53 +194,6 @@ function restoreParamsFromGraph(g){
         $("#" + mapped_parameters[idx]).val(g.config[mapped_parameters[idx]])
     }
 }
-
-// Colour
-$("#node_color").on('input change', function(event){
-    graph.config.node_color = event.target.value;
-    dirty = true;
-    if(event.type === "change"){
-        graphHistory.pushHistory([ 'graph.config.node_color', event.target.value ]);
-    }
-})
-$("#node_stroke_color").on('input change', function(event){
-    graph.config.node_stroke_color = event.target.value;
-    dirty = true;
-    if(event.type === "change"){
-        graphHistory.pushHistory([ 'graph.config.node_stroke_color', event.target.value ]);
-    }
-})
-$("#node_text_color").on('input change', function(event){
-    graph.config.node_text_color = event.target.value;
-    dirty = true;
-    if(event.type === "change"){
-        graphHistory.pushHistory([ 'graph.config.node_text_color', event.target.value ]);
-    }
- })
-$("#link_stroke").on('input change', function(event){
-    graph.config.link_stroke = event.target.value;
-    dirty = true;
-    if(event.type === "change"){
-        graphHistory.pushHistory([ 'graph.config.link_stroke', event.target.value ]);
-        draw();
-    }
-})
-// Non-colour
-$("#node_border_thickness").on('change', function(event){
-    graph.config.node_border_thickness = event.target.value;
-    dirty = true;
-    graphHistory.pushHistory([ 'graph.config.node_border_thickness', event.target.value ]);
- })
-$("#link_thickness").on('change', function(event){
-    graph.config.link_thickness = event.target.value;
-    dirty = true;
-    graphHistory.pushHistory([ 'graph.config.node_border_thickness', event.target.value ]);
- })
-$("#unfocused_opacity").on('change', function(event){
-    graph.config.unfocused_opacity = event.target.value;
-    dirty = true;
-    graphHistory.pushHistory([ 'graph.config.node_border_thickness', event.target.value ]);
- })
 
 function draw(){
     $("svg").empty();
@@ -249,13 +226,13 @@ function draw(){
         .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:1')
         .attr('offset', '0.3')
     grad_dec.append('stop')
-        .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:' + graph.config.unfocused_opacity / 100)
+        .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:1')
         .attr('offset', '0.5')
 
     var grad_inc = defs.append('linearGradient')
         .attr('id', 'grad_inc');
     grad_inc.append('stop')
-        .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:' + graph.config.unfocused_opacity / 100)
+        .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:1')
         .attr('offset', '0.5')
     grad_inc.append('stop')
         .attr('style', 'stop-color:' + graph.config.link_stroke + ';stop-opacity:1')
@@ -310,15 +287,14 @@ function draw(){
                 .on("drag", dragged)
                 .on("end", dragended)
         )
-        .on("click", function(d){
-            cachedData[d.id].focus = !cachedData[d.id].focus;
-            tmpnode = positionOfNode(graph, d.id)
-            tmpnode.focus = cachedData[d.id].focus
-            dirty = true;
-            graphHistory.pushHistory(['focus', [d.id, cachedData[d.id].focus]]);
-            save();
-        })
         ;
+
+    // states               = [new, queued, running, ok, error]
+    var progressBarsNew     = node_group.append("rect").attr("height", 30).attr('class', 'pbar_new');
+	var progressBarsQueued  = node_group.append("rect").attr("height", 30).attr('class', 'pbar_queued');
+	var progressBarsRunning = node_group.append("rect").attr("height", 30).attr('class', 'pbar_running');
+	var progressBarsOk      = node_group.append("rect").attr("height", 30).attr('class', 'pbar_ok');
+	var progressBarsError   = node_group.append("rect").attr("height", 30).attr('class', 'pbar_error');
 
 
     var node = node_group
@@ -333,10 +309,18 @@ function draw(){
         .text(function(d){ return d.name; })
         ;
 
-    simulation
-        .nodes(graph.nodes)
-        .on("tick", ticked)
-        ;
+	if(false){
+		//dynamic
+		simulation
+			.nodes(graph.nodes)
+			.on("tick", ticked)
+			;
+	} else {
+		//static plkot
+		ticked();
+		ticked();
+		ticked();
+	}
 
     function ticked() {
         link
@@ -395,35 +379,96 @@ function draw(){
                         }
                     } else {
                         var rgb  = hexToRgb(graph.config.link_stroke)
-                        return 'rgba(' + rgb[0]  + ','  + rgb[1]  + ','  + rgb[2]  + ',' + graph.config.unfocused_opacity / 100 + ')';
+                        return 'rgb(' + rgb[0]  + ','  + rgb[1]  + ','  + rgb[2]  + ')';
                     }
                 }
                 return 'black';
             })
             .attr("stroke-width", graph.config.link_thickness)
-            //.attr("opacity", function(d){
-                //target = positionOfNode(graph, d.target)
-                //source = positionOfNode(graph, d.source)
-
-                //if((cachedData[source.id] && cachedData[source.id].focus) && (cachedData[target.id] && cachedData[target.id].focus)){
-                    //return 1
-                //}
-                //return graph.config.unfocused_opacity / 100;
-            //})
             ;
 
         node
-            .attr("fill",   graph.config.node_color)
+            .attr("fill", 'none')
             .attr("stroke", graph.config.node_stroke_color)
             .attr("stroke-width", graph.config.node_border_thickness)
             .attr("x", function(d) { return d.x; })
             .attr("y", function(d) { return d.y; })
-            .attr("opacity", function(d){
-                if(cachedData[d.id] && cachedData[d.id].focus){
-                    return 1
-                }
-                return graph.config.unfocused_opacity / 100;
-            })
+            .attr("opacity", "1")
+            ;
+
+        progressBarsNew
+            .attr("x", function(d) {
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'new');
+				}
+				return d.x })
+			.attr('width', function(d){
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return cachedData[d.id].width * progressBarWidth(d.progress, 'new')
+				}
+				return 0;
+			})
+            .attr("y", function(d) { return d.y;  })
+            ;
+
+        progressBarsQueued
+            .attr("x", function(d) {
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'queued');
+				}
+				return d.x })
+			.attr('width', function(d){
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return cachedData[d.id].width * progressBarWidth(d.progress, 'queued')
+				}
+				return 0;
+			})
+            .attr("y", function(d) { return d.y;  })
+            ;
+
+        progressBarsRunning
+            .attr("x", function(d) {
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'running');
+				}
+				return d.x })
+			.attr('width', function(d){
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return cachedData[d.id].width * progressBarWidth(d.progress, 'running')
+				}
+				return 0;
+			})
+            .attr("y", function(d) { return d.y;  })
+            ;
+
+        progressBarsOk
+            .attr("x", function(d) {
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'ok');
+				}
+				return d.x })
+			.attr('width', function(d){
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return cachedData[d.id].width * progressBarWidth(d.progress, 'ok')
+				}
+				return 0;
+			})
+            .attr("y", function(d) { return d.y;  })
+            ;
+
+        progressBarsError
+            .attr("x", function(d) {
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'error');
+				}
+				return d.x })
+			.attr('width', function(d){
+				if(cachedData[d.id] && cachedData[d.id].width){
+					return cachedData[d.id].width * progressBarWidth(d.progress, 'error')
+				}
+				return 0;
+			})
+            .attr("y", function(d) { return d.y;  })
             ;
 
         labels
@@ -434,16 +479,11 @@ function draw(){
                     x: d.x,
                     //y: d.y,
                 }
-                d3.select(this.parentNode.children[0]).attr('width', cachedData[d.id].width);
+                d3.select(this.parentNode.children[5]).attr('width', cachedData[d.id].width);
             })
             .attr("font-family", graph.config.font_family)
             .attr("fill", graph.config.node_text_color)
-            .attr("opacity", function(d){
-                if(cachedData[d.id].focus){
-                    return 1
-                }
-                return graph.config.unfocused_opacity / 100;
-            })
+            .attr("opacity", "1")
             .attr("x", function(d) { return d.x + graph.config.node_padding; })
             .attr("y", function(d) { return d.y + 15 + graph.config.node_padding; });//TODO
     }
@@ -459,15 +499,12 @@ function zoomEnd(x) {
     tx = d3.event.transform;
     txf = "translate(" + tx.x + " " + tx.y + ") scale(" + tx.k + ")";
     graph.config.zoom = txf;
-    //pushHistory(["translate", txf]);
 }
 
 function dragstarted(d) {
-    dirty = true;
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x; d.fy = d.y;
     d3.event.sourceEvent.stopPropagation();
-    d3.select(this).classed("dragging", true);
 }
 
 function dragged(d) {
@@ -478,85 +515,35 @@ function dragged(d) {
 function dragended(d) {
     d.fx = null;
     d.fy = null;
-    d3.select(this).classed("dragging", false);
-    graphHistory.pushHistory(["point", [d.id, d.x, d.y]])
-    save();
 }
 
 function load(){
     console.log("Loading")
-    if (sessionStorage.getItem("graph") === null) {
-        console.log("No stored graph")
-        d3.json("ex.ga", function(error, loadedGraph){
+    d3.json("out.ga", function(error, loadedGraph){
+        if (error){
+            Materialize.toast(error, 4000)
+            throw error;
+        }
+        d3.json("data.json", function(error, loadedData){
             if (error){
                 Materialize.toast(error, 4000)
                 throw error;
             }
-            graph = processGalaxyWorkflowToGraph(loadedGraph);
+
+            progress = stepCounts(loadedData);
+            graph = processGalaxyWorkflowToGraph(loadedGraph, progress);
             graph.config = default_config;
             origGraph = clone(graph);
-            save();
             draw();
         })
-    } else {
-        console.log("Restoring")
-        restore();
-        draw();
-    }
+    })
 }
 
 load();
 
-$("#left_col").height($(window).height() + 15);
-$("#left_col_contents").height( $(window).height() - $("#logo").height() - 20 + 15)
-$("#download").click(function(){
-    var blob = new Blob(
-        [$("#svg_container").html()],
-        {type: "image/svg+xml"});
-    fileSaver.saveAs(blob, "workflow_plot.svg");
-});
-
-$("#uploaded_workflow").on('change', function(evt){
-    var file = evt.target.files[0]
-    var reader = new FileReader();
-
-    reader.onloadend = function(event) {
-        if (event.target.readyState == FileReader.DONE) { // DONE == 2
-            try{
-                var data = JSON.parse(event.target.result);
-                graph = null;
-                graph = processGalaxyWorkflowToGraph(data);
-                graph.config = default_config;
-                origGraph = clone(graph);
-                sessionStorage.setItem('graph', JSON.stringify(graph));
-                sessionStorage.setItem('graph', JSON.stringify(graph));
-                Materialize.toast('Saved', 1000)
-
-                graphHistory.reset();
-                draw();
-            } catch(ex) {
-                  Materialize.toast('Failed to parse JSON', 4000) // 4000 is the duration of the toast
-            }
-        }
-    };
-
-    var blob = file.slice(0, file.size);
-    reader.readAsBinaryString(blob);
-
-});
-
-$("#upload").click(function(){
-    $("#uploaded_workflow")[0].click();
-});
-
-$("#help").click(function(){
-    int(); // intentional
-});
-
 $(window).on('load resize', function(){
     height = $(window).height() - margin.top - margin.bottom
-    $("#left_col").height($(window).height() + 15);
-    $("#left_col_contents").height( $(window).height() - $("#logo").height() - 20 + 15)
+    width = $(window).width() - margin.left - margin.right
 
     d3.select("svg")
         .attr("width", width + margin.left + margin.right)
@@ -565,24 +552,3 @@ $(window).on('load resize', function(){
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
 });
-
-$("#version").text(globalConfig.version);
-
-
-function KeyPress(e) {
-    // http://stackoverflow.com/questions/16006583/capturing-ctrlz-key-combination-in-javascript
-    var evtobj = window.event? event : e
-    if (evtobj.keyCode == 90 && evtobj.ctrlKey){
-        // Undo
-        if(graphHistory.canGoBack()){
-            g = graphHistory.goBack(origGraph);
-
-            restoreParamsFromGraph(g);
-            draw();
-        } else {
-            // cannot go back.
-        }
-    }
-}
-
-document.onkeydown = KeyPress;
