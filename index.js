@@ -520,16 +520,7 @@ function dragended(d) {
 function load(){
     console.log("Loading")
     d3.json("out.ga", function(error, loadedGraph){
-        if (error){
-            Materialize.toast(error, 4000)
-            throw error;
-        }
         d3.json("data.json", function(error, loadedData){
-            if (error){
-                Materialize.toast(error, 4000)
-                throw error;
-            }
-
             progress = stepCounts(loadedData);
             graph = processGalaxyWorkflowToGraph(loadedGraph, progress);
             graph.config = default_config;
