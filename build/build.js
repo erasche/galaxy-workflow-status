@@ -53,9 +53,9 @@
 
 	__webpack_require__(2);
 	__webpack_require__(6);
-	var globalConfig = __webpack_require__(8);
+	var globalConfig = __webpack_require__(7);
 
-	var d3 = __webpack_require__(9);
+	var d3 = __webpack_require__(8);
 	var margin = {top: -5, right: -5, bottom: -5, left: -5},
 	    mapped_parameters = [
 	        'node_color',
@@ -362,7 +362,7 @@
 	        .text(function(d){ return d.name; })
 	        ;
 
-	    if(false){
+	    if(true){
 	        //dynamic
 	        simulation
 	            .nodes(graph.nodes)
@@ -957,33 +957,19 @@
 
 /***/ },
 /* 6 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	var map = {
-		"./index.html": 7
-	};
 	function webpackContext(req) {
-		return __webpack_require__(webpackContextResolve(req));
-	};
-	function webpackContextResolve(req) {
-		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
-	};
-	webpackContext.keys = function webpackContextKeys() {
-		return Object.keys(map);
-	};
-	webpackContext.resolve = webpackContextResolve;
+		throw new Error("Cannot find module '" + req + "'.");
+	}
+	webpackContext.keys = function() { return []; };
+	webpackContext.resolve = webpackContext;
 	module.exports = webpackContext;
 	webpackContext.id = 6;
 
 
 /***/ },
 /* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__.p + "index.html";
-
-/***/ },
-/* 8 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -1038,7 +1024,7 @@
 	};
 
 /***/ },
-/* 9 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// https://d3js.org Version 4.1.1. Copyright 2016 Mike Bostock.
