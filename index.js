@@ -309,7 +309,7 @@ function draw(){
         .text(function(d){ return d.name; })
         ;
 
-    if(false){
+    if(true){
         //dynamic
         simulation
             .nodes(graph.nodes)
