@@ -3,7 +3,7 @@ var FileLoader = require('file-loader');
 module.exports = {
     entry: ["./index.js"],
     output: {
-        path: __dirname,
+        path: __dirname + '/build',
         filename: "build.js",
         publicPath: "",
     },
