@@ -34,7 +34,7 @@
 /******/ 	__webpack_require__.c = installedModules;
 
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "build/";
+/******/ 	__webpack_require__.p = "";
 
 /******/ 	// Load entry module and return exports
 /******/ 	return __webpack_require__(0);
@@ -94,33 +94,33 @@
 	var PBAR_STATES = ['new', 'queued', 'running', 'ok', 'error'];
 
 	var progressBarWidth= function(progress, state){
-		if(progress === undefined){ return 0; }
-		if(state in progress){
-			return progress[state];
-		} else {
-			return 0;
-		}
+	    if(progress === undefined){ return 0; }
+	    if(state in progress){
+	        return progress[state];
+	    } else {
+	        return 0;
+	    }
 	}
 
 	var progressBarLeftSum = function(progress, state){
-		if(state === 'new'){
-			return 0;
-		}
-		else if(state === 'queued'){
-			return progressBarWidth(progress, 'new') + progressBarLeftSum(progress, 'new');
-		}
-		else if(state === 'running'){
-			return progressBarWidth(progress, 'queued') + progressBarLeftSum(progress, 'queued');
-		}
-		else if(state === 'ok'){
-			return progressBarWidth(progress, 'running') + progressBarLeftSum(progress, 'running');
-		}
-		else if(state === 'error'){
-			return progressBarWidth(progress, 'ok') + progressBarLeftSum(progress, 'ok');
-		}
-		else {
-			 return 10;
-		}
+	    if(state === 'new'){
+	        return 0;
+	    }
+	    else if(state === 'queued'){
+	        return progressBarWidth(progress, 'new') + progressBarLeftSum(progress, 'new');
+	    }
+	    else if(state === 'running'){
+	        return progressBarWidth(progress, 'queued') + progressBarLeftSum(progress, 'queued');
+	    }
+	    else if(state === 'ok'){
+	        return progressBarWidth(progress, 'running') + progressBarLeftSum(progress, 'running');
+	    }
+	    else if(state === 'error'){
+	        return progressBarWidth(progress, 'ok') + progressBarLeftSum(progress, 'ok');
+	    }
+	    else {
+	         return 10;
+	    }
 	}
 
 	var zoom = d3.zoom()
@@ -182,11 +182,11 @@
 	        var step = ga.steps[i];
 	        step.x = step.position.left / 1.3;
 	        step.y = step.position.top / 2;
-			if(step.uuid in progress){
-				step.progress = progress[step.uuid];
-			} else {
-				step.progress = progress[step.id];
-			}
+	        if(step.uuid in progress){
+	            step.progress = progress[step.uuid];
+	        } else {
+	            step.progress = progress[step.id];
+	        }
 	        local_graph.nodes.push(step);
 
 	        for(var j in ga.steps[i].input_connections){
@@ -344,10 +344,10 @@
 
 	    // states               = [new, queued, running, ok, error]
 	    var progressBarsNew     = node_group.append("rect").attr("height", 30).attr('class', 'pbar_new');
-		var progressBarsQueued  = node_group.append("rect").attr("height", 30).attr('class', 'pbar_queued');
-		var progressBarsRunning = node_group.append("rect").attr("height", 30).attr('class', 'pbar_running');
-		var progressBarsOk      = node_group.append("rect").attr("height", 30).attr('class', 'pbar_ok');
-		var progressBarsError   = node_group.append("rect").attr("height", 30).attr('class', 'pbar_error');
+	    var progressBarsQueued  = node_group.append("rect").attr("height", 30).attr('class', 'pbar_queued');
+	    var progressBarsRunning = node_group.append("rect").attr("height", 30).attr('class', 'pbar_running');
+	    var progressBarsOk      = node_group.append("rect").attr("height", 30).attr('class', 'pbar_ok');
+	    var progressBarsError   = node_group.append("rect").attr("height", 30).attr('class', 'pbar_error');
 
 
 	    var node = node_group
@@ -362,18 +362,18 @@
 	        .text(function(d){ return d.name; })
 	        ;
 
-		if(false){
-			//dynamic
-			simulation
-				.nodes(graph.nodes)
-				.on("tick", ticked)
-				;
-		} else {
-			//static plkot
-			ticked();
-			ticked();
-			ticked();
-		}
+	    if(false){
+	        //dynamic
+	        simulation
+	            .nodes(graph.nodes)
+	            .on("tick", ticked)
+	            ;
+	    } else {
+	        //static plkot
+	        ticked();
+	        ticked();
+	        ticked();
+	    }
 
 	    function ticked() {
 	        link
@@ -451,76 +451,76 @@
 
 	        progressBarsNew
 	            .attr("x", function(d) {
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'new');
-					}
-					return d.x })
-				.attr('width', function(d){
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return cachedData[d.id].width * progressBarWidth(d.progress, 'new')
-					}
-					return 0;
-				})
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'new');
+	                }
+	                return d.x })
+	            .attr('width', function(d){
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return cachedData[d.id].width * progressBarWidth(d.progress, 'new')
+	                }
+	                return 0;
+	            })
 	            .attr("y", function(d) { return d.y;  })
 	            ;
 
 	        progressBarsQueued
 	            .attr("x", function(d) {
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'queued');
-					}
-					return d.x })
-				.attr('width', function(d){
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return cachedData[d.id].width * progressBarWidth(d.progress, 'queued')
-					}
-					return 0;
-				})
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'queued');
+	                }
+	                return d.x })
+	            .attr('width', function(d){
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return cachedData[d.id].width * progressBarWidth(d.progress, 'queued')
+	                }
+	                return 0;
+	            })
 	            .attr("y", function(d) { return d.y;  })
 	            ;
 
 	        progressBarsRunning
 	            .attr("x", function(d) {
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'running');
-					}
-					return d.x })
-				.attr('width', function(d){
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return cachedData[d.id].width * progressBarWidth(d.progress, 'running')
-					}
-					return 0;
-				})
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'running');
+	                }
+	                return d.x })
+	            .attr('width', function(d){
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return cachedData[d.id].width * progressBarWidth(d.progress, 'running')
+	                }
+	                return 0;
+	            })
 	            .attr("y", function(d) { return d.y;  })
 	            ;
 
 	        progressBarsOk
 	            .attr("x", function(d) {
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'ok');
-					}
-					return d.x })
-				.attr('width', function(d){
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return cachedData[d.id].width * progressBarWidth(d.progress, 'ok')
-					}
-					return 0;
-				})
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'ok');
+	                }
+	                return d.x })
+	            .attr('width', function(d){
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return cachedData[d.id].width * progressBarWidth(d.progress, 'ok')
+	                }
+	                return 0;
+	            })
 	            .attr("y", function(d) { return d.y;  })
 	            ;
 
 	        progressBarsError
 	            .attr("x", function(d) {
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'error');
-					}
-					return d.x })
-				.attr('width', function(d){
-					if(cachedData[d.id] && cachedData[d.id].width){
-						return cachedData[d.id].width * progressBarWidth(d.progress, 'error')
-					}
-					return 0;
-				})
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return d.x + cachedData[d.id].width *  progressBarLeftSum(d.progress, 'error');
+	                }
+	                return d.x })
+	            .attr('width', function(d){
+	                if(cachedData[d.id] && cachedData[d.id].width){
+	                    return cachedData[d.id].width * progressBarWidth(d.progress, 'error')
+	                }
+	                return 0;
+	            })
 	            .attr("y", function(d) { return d.y;  })
 	            ;
 
