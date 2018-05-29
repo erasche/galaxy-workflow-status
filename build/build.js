@@ -53,9 +53,9 @@
 
 	__webpack_require__(2);
 	__webpack_require__(6);
-	var globalConfig = __webpack_require__(7);
+	var globalConfig = __webpack_require__(8);
 
-	var d3 = __webpack_require__(8);
+	var d3 = __webpack_require__(9);
 	var margin = {top: -5, right: -5, bottom: -5, left: -5},
 	    mapped_parameters = [
 	        'node_color',
@@ -948,19 +948,33 @@
 
 /***/ },
 /* 6 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
+	var map = {
+		"./index.html": 7
+	};
 	function webpackContext(req) {
-		throw new Error("Cannot find module '" + req + "'.");
-	}
-	webpackContext.keys = function() { return []; };
-	webpackContext.resolve = webpackContext;
+		return __webpack_require__(webpackContextResolve(req));
+	};
+	function webpackContextResolve(req) {
+		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
+	};
+	webpackContext.keys = function webpackContextKeys() {
+		return Object.keys(map);
+	};
+	webpackContext.resolve = webpackContextResolve;
 	module.exports = webpackContext;
 	webpackContext.id = 6;
 
 
 /***/ },
 /* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__.p + "build/index.html";
+
+/***/ },
+/* 8 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -1006,7 +1020,7 @@
 			"d3",
 			"graphics"
 		],
-		"author": "Eric Rasche",
+		"author": "Helena Rasche",
 		"license": "AGPL-3.0",
 		"bugs": {
 			"url": "https://github.com/erasche/galaxy-workflow-plotter/issues"
@@ -1015,7 +1029,7 @@
 	};
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// https://d3js.org Version 4.1.1. Copyright 2016 Mike Bostock.
